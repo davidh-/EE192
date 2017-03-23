@@ -1,0 +1,4 @@
+time,linescan,servo,motor,
+Time,Linescan,Servo PWM,Motor PWM,
+ms,ADC,PWM (us),%DC,
+,,,,Motor PWM
