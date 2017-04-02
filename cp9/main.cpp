@@ -58,8 +58,8 @@ float max = 0.0;
 int max_i = 0;
 float pos = 0.0;
 
-// Motor PWM = 0.07 = 7%
-float motor_pwm = 0.07f;
+// Motor PWM = 0.12 = 12%
+float motor_pwm = 0.12f;
 
 // Line cam vars
 int PIXELS = 128;
