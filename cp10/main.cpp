@@ -5,6 +5,8 @@
 
 //TELEMETRY
 MODSERIAL telemetry_serial(PTC15, PTC14);
+MODSERIAL pc(USBTX, USBRX);
+
 
 telemetry::MbedHal telemetry_hal(telemetry_serial);
 telemetry::Telemetry telemetry_obj(telemetry_hal);
@@ -15,8 +17,8 @@ telemetry::Numeric<float> tele_servo_pwm(telemetry_obj, "servo", "Servo PWM", "P
 telemetry::Numeric<float> tele_motor_pwm(telemetry_obj, "motor", "Motor PWM", "%DC", 0);
 
 telemetry::Numeric<unsigned short> tele_cam_avg(telemetry_obj, "cam_avg", "Camera Average", "(0-65535)", 0);
-telemetry::Numeric<unsigned short> tele_cam_max(telemetry_obj, "cam_max", "Camera Max", "(0-65535)", 0);
-telemetry::Numeric<float> tele_cam_exp_time(telemetry_obj, "exp_time", "Exposure Time", "ms", 0);
+//telemetry::Numeric<unsigned short> tele_cam_max(telemetry_obj, "cam_max", "Camera Max", "(0-65535)", 0);
+telemetry::Numeric<float> tele_cam_exp_time(telemetry_obj, "exp_time", "Exposure Time", "us", 0);
 
 
 
@@ -31,7 +33,7 @@ InterruptIn hall(D10);
 // Tickers
 Ticker timestep;
 //Ticker printer;
-Ticker telemTick;
+Ticker teleTick;
 
 // Digital pin to read from Hall Sensor
 PwmOut motor(D13);
@@ -49,7 +51,7 @@ const float maxPWM = 0.30;
 const float minPWM = 0.0;
 
 //TELEMETRY
-const float dt_telem = 1.0; //telemetry clock
+float dt_tele = 1.0; //telemetry clock
 
 //transform to m/s with gear ratio (9:1 gear ratio) (r = 32.5 mm)
 const float r = 0.0325; // meters
@@ -96,7 +98,7 @@ unsigned short avg = 0;
 
 
 Timer exp_timer;
-float exp_time = 1.6;
+float exp_time = 0.000001; //1us
 
 
 //FUNCTIONS!
@@ -139,7 +141,8 @@ void read_f_cam() {
         }
     }
     exp_timer.stop();
-    wait(exp_time-exp_timer.read_ms());
+    wait(0.0000010);
+//    wait(0.000001);
 }
 void read_r_cam() {
     //real read:
@@ -153,29 +156,30 @@ void read_r_cam() {
     for(int i = 0; i < PIXELS; i++) {
         CLK = 1;
         data[i] = A_IN.read_u16();
+        tele_linescan[i] = data[i];
         CLK = 0;
         if (data[i] > max) { //calc max
             max = data[i];
             max_i = i;
         }
-        avg + data[i];
+        avg = avg + data[i];
         
     }
     avg = avg /PIXELS;
-    // update telem variables
+//     update telem variables
     tele_cam_avg = avg;
-    tele_cam_max = max;
+//    tele_cam_max = max;
 }
 
 void exposure_control() {
-    if (avg > 65535*0.75) {
+    if (avg > data[max_i]*0.75) {
         if (exp_time > 0.1) {
-            exp_time - 0.5;
+            exp_time = exp_time - 0.0000005;
         }
     }
-    else if (avg < 65535*0.25) {
+    else if (avg < data[max_i]*0.25) {
         if (exp_time < 10) {
-            exp_time + 0.5;
+            exp_time = exp_time + 0.0000005;
         }  
     }
     // update telem variables
@@ -300,8 +304,8 @@ void setup() {
 
     tele_motor_pwm.set_limits(0.0, 20.0); // lower bound, upper bound
     tele_servo_pwm.set_limits(0.0, 2000.0); // lower bound, upper bound
-    tele_cam_avg.set_limits(0.0, 65535); // lower bound, upper bound
-    tele_cam_max.set_limits(0.0, 65535); // lower bound, upper bound
+//    tele_cam_avg.set_limits(0.0,); // lower bound, upper bound
+//    tele_cam_max.set_limits(0.0, 65535); // lower bound, upper bound
     tele_cam_exp_time.set_limits(0.0, 15); // lower bound, upper bound
 
     telemetry_obj.transmit_header();
@@ -315,8 +319,8 @@ void setup() {
     hall.fall(&rpmCounter);
 
     //set Ticker interrupts
-    timestep.attach(&control,dt);
-    telemTick.attach(&send_telem,dt_telem);
+    timestep.attach(&control, dt);
+//    teleTick.attach(&test_f, 5);
 
 
 
@@ -332,9 +336,15 @@ void setup() {
 int main() {
     //run setup function
     setup();
-
+    Timer tele_timer;
+    tele_timer.start();
     //run while loop
     while (1) {
-
+        tele_timer.stop();
+        if (tele_timer.read() > 0.5) {
+            send_telem();
+            tele_timer.reset();
+        }
+        tele_timer.start();
     }
 }
