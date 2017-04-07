@@ -51,7 +51,7 @@
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor.874144438" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor" value="true" valueType="boolean"/>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs.1457752231" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs" valueType="definedSymbols">
                                   
-                                    <listOptionValue builtIn="false" value="MBED_BUILD_TIMESTAMP=1491436945.17"/>
+                                    <listOptionValue builtIn="false" value="FEATURE_LWIP=1"/>
                                   
                                     <listOptionValue builtIn="false" value="__MBED__=1"/>
                                   
@@ -77,8 +77,6 @@
                                   
                                     <listOptionValue builtIn="false" value="FSL_RTOS_MBED"/>
                                   
-                                    <listOptionValue builtIn="false" value="FEATURE_LWIP=1"/>
-                                  
                                     <listOptionValue builtIn="false" value="DEVICE_STORAGE=1"/>
                                   
                                     <listOptionValue builtIn="false" value="TARGET_KPSDK_MCUS"/>
@@ -86,6 +84,8 @@
                                     <listOptionValue builtIn="false" value="TARGET_FLASH_CMSIS_ALGO"/>
                                   
                                     <listOptionValue builtIn="false" value="TOOLCHAIN_GCC"/>
+                                  
+                                    <listOptionValue builtIn="false" value="MBED_BUILD_TIMESTAMP=1491544597.41"/>
                                   
                                     <listOptionValue builtIn="false" value="ARM_MATH_CM4"/>
                                   
@@ -548,7 +548,7 @@
 								</option>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs.26057600" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs" valueType="definedSymbols">
                                   
-                                    <listOptionValue builtIn="false" value="MBED_BUILD_TIMESTAMP=1491436945.17"/>
+                                    <listOptionValue builtIn="false" value="FEATURE_LWIP=1"/>
                                   
                                     <listOptionValue builtIn="false" value="__MBED__=1"/>
                                   
@@ -574,8 +574,6 @@
                                   
                                     <listOptionValue builtIn="false" value="FSL_RTOS_MBED"/>
                                   
-                                    <listOptionValue builtIn="false" value="FEATURE_LWIP=1"/>
-                                  
                                     <listOptionValue builtIn="false" value="DEVICE_STORAGE=1"/>
                                   
                                     <listOptionValue builtIn="false" value="TARGET_KPSDK_MCUS"/>
@@ -583,6 +581,8 @@
                                     <listOptionValue builtIn="false" value="TARGET_FLASH_CMSIS_ALGO"/>
                                   
                                     <listOptionValue builtIn="false" value="TOOLCHAIN_GCC"/>
+                                  
+                                    <listOptionValue builtIn="false" value="MBED_BUILD_TIMESTAMP=1491544597.41"/>
                                   
                                     <listOptionValue builtIn="false" value="ARM_MATH_CM4"/>
                                   
@@ -853,7 +853,7 @@
 								</option>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.defs.1601945676" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.defs" useByScannerDiscovery="false" valueType="definedSymbols">
                                   
-                                    <listOptionValue builtIn="false" value="MBED_BUILD_TIMESTAMP=1491436945.17"/>
+                                    <listOptionValue builtIn="false" value="FEATURE_LWIP=1"/>
                                   
                                     <listOptionValue builtIn="false" value="__MBED__=1"/>
                                   
@@ -879,8 +879,6 @@
                                   
                                     <listOptionValue builtIn="false" value="FSL_RTOS_MBED"/>
                                   
-                                    <listOptionValue builtIn="false" value="FEATURE_LWIP=1"/>
-                                  
                                     <listOptionValue builtIn="false" value="DEVICE_STORAGE=1"/>
                                   
                                     <listOptionValue builtIn="false" value="TARGET_KPSDK_MCUS"/>
@@ -888,6 +886,8 @@
                                     <listOptionValue builtIn="false" value="TARGET_FLASH_CMSIS_ALGO"/>
                                   
                                     <listOptionValue builtIn="false" value="TOOLCHAIN_GCC"/>
+                                  
+                                    <listOptionValue builtIn="false" value="MBED_BUILD_TIMESTAMP=1491544597.41"/>
                                   
                                     <listOptionValue builtIn="false" value="ARM_MATH_CM4"/>
                                   
@@ -1060,7 +1060,7 @@
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor.874144438" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor" value="true" valueType="boolean"/>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs.1457752231" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs" valueType="definedSymbols">
 	                              
-	                                <listOptionValue builtIn="false" value="MBED_BUILD_TIMESTAMP=1491436945.17"/>
+	                                <listOptionValue builtIn="false" value="FEATURE_LWIP=1"/>
 	                              
 	                                <listOptionValue builtIn="false" value="__MBED__=1"/>
 	                              
@@ -1086,8 +1086,6 @@
 	                              
 	                                <listOptionValue builtIn="false" value="FSL_RTOS_MBED"/>
 	                              
-	                                <listOptionValue builtIn="false" value="FEATURE_LWIP=1"/>
-	                              
 	                                <listOptionValue builtIn="false" value="DEVICE_STORAGE=1"/>
 	                              
 	                                <listOptionValue builtIn="false" value="TARGET_KPSDK_MCUS"/>
@@ -1095,6 +1093,8 @@
 	                                <listOptionValue builtIn="false" value="TARGET_FLASH_CMSIS_ALGO"/>
 	                              
 	                                <listOptionValue builtIn="false" value="TOOLCHAIN_GCC"/>
+	                              
+	                                <listOptionValue builtIn="false" value="MBED_BUILD_TIMESTAMP=1491544597.41"/>
 	                              
 	                                <listOptionValue builtIn="false" value="ARM_MATH_CM4"/>
 	                              
@@ -1557,7 +1557,7 @@
 								</option>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs.26057600" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs" valueType="definedSymbols">
 	                              
-	                                <listOptionValue builtIn="false" value="MBED_BUILD_TIMESTAMP=1491436945.17"/>
+	                                <listOptionValue builtIn="false" value="FEATURE_LWIP=1"/>
 	                              
 	                                <listOptionValue builtIn="false" value="__MBED__=1"/>
 	                              
@@ -1583,8 +1583,6 @@
 	                              
 	                                <listOptionValue builtIn="false" value="FSL_RTOS_MBED"/>
 	                              
-	                                <listOptionValue builtIn="false" value="FEATURE_LWIP=1"/>
-	                              
 	                                <listOptionValue builtIn="false" value="DEVICE_STORAGE=1"/>
 	                              
 	                                <listOptionValue builtIn="false" value="TARGET_KPSDK_MCUS"/>
@@ -1592,6 +1590,8 @@
 	                                <listOptionValue builtIn="false" value="TARGET_FLASH_CMSIS_ALGO"/>
 	                              
 	                                <listOptionValue builtIn="false" value="TOOLCHAIN_GCC"/>
+	                              
+	                                <listOptionValue builtIn="false" value="MBED_BUILD_TIMESTAMP=1491544597.41"/>
 	                              
 	                                <listOptionValue builtIn="false" value="ARM_MATH_CM4"/>
 	                              
@@ -1862,7 +1862,7 @@
 								</option>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.defs.1601945676" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.defs" useByScannerDiscovery="false" valueType="definedSymbols">
 	                              
-	                                <listOptionValue builtIn="false" value="MBED_BUILD_TIMESTAMP=1491436945.17"/>
+	                                <listOptionValue builtIn="false" value="FEATURE_LWIP=1"/>
 	                              
 	                                <listOptionValue builtIn="false" value="__MBED__=1"/>
 	                              
@@ -1888,8 +1888,6 @@
 	                              
 	                                <listOptionValue builtIn="false" value="FSL_RTOS_MBED"/>
 	                              
-	                                <listOptionValue builtIn="false" value="FEATURE_LWIP=1"/>
-	                              
 	                                <listOptionValue builtIn="false" value="DEVICE_STORAGE=1"/>
 	                              
 	                                <listOptionValue builtIn="false" value="TARGET_KPSDK_MCUS"/>
@@ -1897,6 +1895,8 @@
 	                                <listOptionValue builtIn="false" value="TARGET_FLASH_CMSIS_ALGO"/>
 	                              
 	                                <listOptionValue builtIn="false" value="TOOLCHAIN_GCC"/>
+	                              
+	                                <listOptionValue builtIn="false" value="MBED_BUILD_TIMESTAMP=1491544597.41"/>
 	                              
 	                                <listOptionValue builtIn="false" value="ARM_MATH_CM4"/>
 	                              
