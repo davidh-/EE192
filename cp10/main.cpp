@@ -6,8 +6,8 @@
 //TELEMETRY
 MODSERIAL telemetry_serial(PTC15, PTC14);
 MODSERIAL pc(USBTX, USBRX);
-
-
+//Serial bt(PTC15,PTC14);
+//
 telemetry::MbedHal telemetry_hal(telemetry_serial);
 telemetry::Telemetry telemetry_obj(telemetry_hal);
 
@@ -17,8 +17,8 @@ telemetry::Numeric<float> tele_servo_pwm(telemetry_obj, "servo", "Servo PWM", "P
 telemetry::Numeric<float> tele_motor_pwm(telemetry_obj, "motor", "Motor PWM", "%DC", 0);
 
 telemetry::Numeric<unsigned short> tele_cam_avg(telemetry_obj, "cam_avg", "Camera Average", "(0-65535)", 0);
-//telemetry::Numeric<unsigned short> tele_cam_max(telemetry_obj, "cam_max", "Camera Max", "(0-65535)", 0);
-telemetry::Numeric<float> tele_cam_exp_time(telemetry_obj, "exp_time", "Exposure Time", "us", 0);
+telemetry::Numeric<float> tele_cam_max(telemetry_obj, "cam_max", "Camera Max", "(0-128)", 0);
+telemetry::Numeric<float> tele_cam_exp_time(telemetry_obj, "exp_time", "Exposure Time", "ms", 0);
 
 
 
@@ -32,8 +32,7 @@ InterruptIn hall(D10);
 
 // Tickers
 Ticker timestep;
-//Ticker printer;
-Ticker teleTick;
+Ticker telem_t;
 
 // Digital pin to read from Hall Sensor
 PwmOut motor(D13);
@@ -75,14 +74,21 @@ volatile float err = 0.0;
 int run = 0;
 
 // Servo endpoints
-float l_end = 1020.0;
-//1440 center
-float r_end = 1750.0;
+//float l_end = 1020.0;
+////1440 center
+//float r_end = 1750.0;
+//float l_end = 1160.0;
+////1520 center
+//float r_end = 1920.0;
+float l_end = 1110.0;
+//1520 center
+float r_end = 1970.0;
 
 // Servo steps
 float divi = 128.0;
 float steps = r_end - l_end;
-float step = steps/divi;
+//float step = steps/divi;
+float step = steps/114;
 
 // Servo position
 volatile float pw = 0.0;
@@ -92,13 +98,17 @@ volatile float pos = 0.0;
 int PIXELS = 128;
 unsigned short data[128];
 
-volatile float max = 0.0;
-volatile int max_i = 0;
+float max = 0.0;
+int max_i = 0;
+volatile int old_max_i = 0;
+
+float prev_max = 0.0;
 unsigned short avg = 0;
 
+const float thresh = 0.75;
 
-Timer exp_timer;
-float exp_time = 0.000001; //1us
+//Timer exp_timer;
+float exp_time = 0.001; //1ms
 
 
 //FUNCTIONS!
@@ -107,6 +117,25 @@ float exp_time = 0.000001; //1us
 void send_telem() {
     tele_time_ms = telemetry_hal.get_time_ms();
     telemetry_obj.do_io();
+    
+    char c = ' ';
+    if (pc.readable()) {
+        c = pc.getc();
+    }
+    if (c == 'u') {
+         exp_time+= 0.001;
+        pc.printf("%f",exp_time);
+    }
+    else if (c == 'd') {
+        exp_time -= 0.001;
+        pc.printf("%f",exp_time);
+    }
+    else if (c == 'r') {
+        exp_time = 0.001;
+        pc.printf("%f",exp_time);
+    }    
+    tele_cam_exp_time = exp_time*1000;
+    
 }
 
 //TELEMETRY
@@ -135,13 +164,14 @@ void read_f_cam() {
     for(int i = 0; i < PIXELS; i++) {
         CLK = 1;
         CLK = 0;
-        if (i == 18) {
-            exp_timer.reset();
-            exp_timer.start(); 
-        }
+//        if (i == 18) {
+//            exp_timer.reset();
+//            exp_timer.start(); 
+//        }
     }
-    exp_timer.stop();
-    wait(0.0000010);
+
+//    exp_timer.stop();
+    wait(exp_time);
 //    wait(0.000001);
 }
 void read_r_cam() {
@@ -159,8 +189,11 @@ void read_r_cam() {
         tele_linescan[i] = data[i];
         CLK = 0;
         if (data[i] > max) { //calc max
-            max = data[i];
-            max_i = i;
+            if ( (i > old_max_i*thresh) || (i < old_max_i*thresh) ) {
+                max = data[i];
+                old_max_i = max_i;
+                max_i = i;
+            }
         }
         avg = avg + data[i];
         
@@ -168,30 +201,29 @@ void read_r_cam() {
     avg = avg /PIXELS;
 //     update telem variables
     tele_cam_avg = avg;
-//    tele_cam_max = max;
+    tele_cam_max = max_i;
 }
 
 void exposure_control() {
     if (avg > data[max_i]*0.75) {
-        if (exp_time > 0.1) {
-            exp_time = exp_time - 0.0000005;
+        if (exp_time > 0.0001) {
+            exp_time = exp_time - 0.0001;
         }
     }
     else if (avg < data[max_i]*0.25) {
-        if (exp_time < 10) {
-            exp_time = exp_time + 0.0000005;
+        if (exp_time < 0.01) {
+            exp_time = exp_time + 0.0001;
         }  
     }
     // update telem variables
-    tele_cam_exp_time = exp_time;
 }
 
 //STEERING!
 //Function for Camera Reading and servo command
 void steeringPD() {
-    read_f_cam();
-    read_r_cam();
-    exposure_control();
+//    read_f_cam();
+//    read_r_cam();
+//    exposure_control();
     
     pos = r_end - (step * max_i);
     pw = pos * (0.000001);
@@ -303,24 +335,24 @@ void setup() {
     telemetry_serial.baud(38400);
 
     tele_motor_pwm.set_limits(0.0, 20.0); // lower bound, upper bound
-    tele_servo_pwm.set_limits(0.0, 2000.0); // lower bound, upper bound
-//    tele_cam_avg.set_limits(0.0,); // lower bound, upper bound
+    tele_servo_pwm.set_limits(l_end, r_end); // lower bound, upper bound
+//    tele_cam_avg.set_limits(0.0); // lower bound, upper bound
 //    tele_cam_max.set_limits(0.0, 65535); // lower bound, upper bound
-    tele_cam_exp_time.set_limits(0.0, 15); // lower bound, upper bound
+//    tele_cam_exp_time.set_limits(0.0, 20); // lower bound, upper bound
 
     telemetry_obj.transmit_header();
 
     //set pwm periods
     motor.period_us(50); // 20 kHz frequency
-    servo.period_ms(10); //Set servo PWM period = 3ms
+    servo.period_ms(3); //Set servo PWM period = 3ms
 
     //set regular interrupts
-    hall.rise(&rpmCounter);
-    hall.fall(&rpmCounter);
+//    hall.rise(&rpmCounter);
+//    hall.fall(&rpmCounter);
 
     //set Ticker interrupts
-    timestep.attach(&control, dt);
-//    teleTick.attach(&test_f, 5);
+    timestep.attach(&control, 0.003);
+//    telem_t.attach(&send_telem, 1);
 
 
 
@@ -336,15 +368,11 @@ void setup() {
 int main() {
     //run setup function
     setup();
-    Timer tele_timer;
-    tele_timer.start();
+
     //run while loop
     while (1) {
-        tele_timer.stop();
-        if (tele_timer.read() > 0.5) {
-            send_telem();
-            tele_timer.reset();
-        }
-        tele_timer.start();
+        read_f_cam();
+        read_r_cam();
+        send_telem();
     }
 }
