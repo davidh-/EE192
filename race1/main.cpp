@@ -16,11 +16,13 @@ telemetry::Numeric<float> tele_servo_pwm(telemetry_obj, "servo", "Servo PWM", "P
 //telemetry::Numeric<float> tele_motor_pwm(telemetry_obj, "motor", "Motor PWM", "%DC", 0);
 //telemetry::Numeric<float> tele_steer_angle(telemetry_obj, "steering", "steer angle", "degrees", -20.0);
 telemetry::Numeric<float> tele_exp_time(telemetry_obj, "camera", "exposure time", "seconds", 0);
-telemetry::Numeric<uint16_t> tele_max_i(telemetry_obj, "camera", "max_i", "pixel pos", 0);
-telemetry::Numeric<uint16_t> tele_max(telemetry_obj, "camera", "max", "max line value",0);
+telemetry::Numeric<uint16_t> tele_cam_max(telemetry_obj, "camera", "max", "cam max value", 0);
+telemetry::Numeric<unsigned short> tele_cam_avg(telemetry_obj, "cam_avg", "Camera Average", "(0-65535)", 0);
+
+//telemetry::Numeric<uint16_t> tele_max(telemetry_obj, "camera", "max", "max line value",0);
 //telemetry::Numeric<uint16_t> tele_max_err(telemetry_obj, "camera", "max_reference error", "max line value reference", 0);
-telemetry::Numeric<uint16_t> tele_lineInView(telemetry_obj, "camera", "line in view", "T or F",  0);
-telemetry::Numeric<uint16_t> tele_linewidth(telemetry_obj, "camera", "linewdith", "pixels", 0);
+//telemetry::Numeric<uint16_t> tele_lineInView(telemetry_obj, "camera", "line in view", "T or F",  0);
+//telemetry::Numeric<uint16_t> tele_linewidth(telemetry_obj, "camera", "linewdith", "pixels", 0);
 
 
 // Line Camera Pins
@@ -113,9 +115,12 @@ float divi = 128.0;
 //float step = steps/114;
 
 // Servo position
+volatile float old_pw = 0.0;
 volatile float pw = 0.0;
 unsigned short max = 0;
 volatile int max_i = 0;
+
+unsigned short avg = 0;
 //volatile float pos = 0.0;
 volatile int old_max_i = 0;
 unsigned short old_max = 0;
@@ -129,127 +134,140 @@ unsigned short prev_data[128];
 
 const float dist_thresh = 40.0;
 
-volatile float exp_time = 0.0001; //10ms
-const float max_exp_time = .006;
-const float min_exp_time = .00001;
-signed int exp_error = 0;
-unsigned short max_ref = 2000; //24575; // 75% of 2^15 - 1;
-unsigned short max_error = 0;
+volatile float exp_time = 0.001; //1ms
+const float max_exp_time = 0.001; //1ms
+const float min_exp_time = 0.00001; //0.01ms
+
+float factor = 0.75;
+//signed int exp_error = 0;
+//unsigned short max_ref = 2000; //24575; // 75% of 2^15 - 1;
+//unsigned short max_error = 0;
 
 
 
-//line out of view conditions
-unsigned int diff_array[128];
-unsigned int max_diff = 0;
-unsigned int min_diff = 0;
-int min_diff_pos = 0;
-int max_diff_pos = 0;
-const int linewidth = 8;
-bool lineInView();
+////line out of view conditions
+//unsigned int diff_array[128];
+//unsigned int max_diff = 0;
+//unsigned int min_diff = 0;
+//int min_diff_pos = 0;
+//int max_diff_pos = 0;
+//const int linewidth = 8;
+//bool lineInView();
 
 //FUNCTIONS!
 
 //TELEMETRY
 void print_serial() {
-	tele_time_ms = telemetry_hal.get_time_ms();
+    tele_time_ms = telemetry_hal.get_time_ms();
     telemetry_obj.do_io();
 }
-
-//ISR for Velocity Printing
-void printerFcn() {
-    printf("%f\r\n",velMA);
+bool lineInView() {
+//    tele_linewidth = abs(max_i - old_max_i);
+//    if (max_i == old_max_i && max_i >= 127) {
+//        return false;
+//    }
+//    return (abs(max_i - old_max_i) < linewidth) && (abs(max - old_max) < .05*max);
+    if (max*0.90 > avg) {
+        return true;    
+    } else {
+        return false;    
+    }
 }
 
 //STEERING!
 //Function for Camera Reading and servo command
 void steeringPD() {
 
-	//Fake ANALOG READ
-	TAOS_SI = 1;
-	TAOS_CLK = 1;
-	TAOS_SI = 0;
-	TAOS_CLK = 0;
-	for(int i = 0; i < PIXELS; i++) {
-		TAOS_CLK = 1;
-		TAOS_CLK = 0;
-	}
+    //Fake ANALOG READ
+    TAOS_SI = 1;
+    TAOS_CLK = 1;
+    TAOS_SI = 0;
+    TAOS_CLK = 0;
+    for(int i = 0; i < PIXELS; i++) {
+        TAOS_CLK = 1;
+        TAOS_CLK = 0;
+    }
 
-	wait(exp_time);
+    wait(exp_time);
 
-	//Real ANALOG READ
-//	TAOS_SI = 0;
-//	TAOS_CLK = 0;
+    //Real ANALOG READ
+//  TAOS_SI = 0;
+//  TAOS_CLK = 0;
 
-	TAOS_SI = 1;
-	TAOS_CLK = 1;
-	TAOS_SI = 0;
-	data[0] = A_IN.read_u16();
-	TAOS_CLK = 0;
+    TAOS_SI = 1;
+    TAOS_CLK = 1;
+    TAOS_SI = 0;
+//    data[0] = A_IN.read_u16();
+    TAOS_CLK = 0;
 
-	old_max = max;
-	max = 0;
-	old_max_i = max_i;
-	prev_steer_angle = steer_angle;
-
-	for(int i = 1; i < PIXELS; i++) {
-		TAOS_CLK = 1;
-		data[i] = A_IN.read_u16();
-		//TELEMETRY
-		tele_linescan[i] = data[i];
-		if (data[i] > max) { //calc max
-			max = data[i];
-			max_i = i;
-		}
-//		if (data[i] > max) { //calc max
-//			if ( (i > old_max_i*1.25) || (i < old_max_i*.75) ) {
-//				max = data[i];
-//				old_max_i = max_i;
-//				max_i = i;
-//			}
-		TAOS_CLK = 0;
-	}
-//	if ((abs(max_i - old_max_i) > dist_thresh) && ((steer_angle > 10.0) || (steer_angle < -10.0))) {
-//		max_i = old_max_i;
-//	} else {
-//		old_max_i = max_i;
-//	}
-
-
-	tele_max_i = max_i;
-	if (lineInView()) {
-		tele_lineInView = 1;
-	} else {
-		tele_lineInView = 0;
-	}
-	tele_max = max;
+    old_max = max;
+    max = 0;
+    old_max_i = max_i;
+    max_i = 0;
+    prev_steer_angle = steer_angle;
+    avg = 0;
+    for(int i = 0; i < PIXELS; i++) {
+        TAOS_CLK = 1;
+        data[i] = A_IN.read_u16();
+        //TELEMETRY
+        tele_linescan[i] = data[i];
+        if (data[i] > max) { //calc max
+        
+            max = data[i];
+            tele_cam_max = data[i];
+            max_i = i;
+//            tele_max_i = max_i;
+        }
+        avg += data[i];
+        TAOS_CLK = 0;
+    }
+    avg /= PIXELS;
+    tele_cam_avg = avg;
+//  if ((abs(max_i - old_max_i) > dist_thresh) && ((steer_angle > 10.0) || (steer_angle < -10.0))) {
+//      max_i = old_max_i;
+//  } else {
+//      old_max_i = max_i;
+//  }
 
 
-	//Steering PD control
+//    tele_max_i = max_i;
+//    if (lineInView()) {
+//        tele_lineInView = 1;
+//    } else {
+//        tele_lineInView = 0;
+//    }
+//    tele_max = max;
 
 
-	if (!lineInView()) {
-		steer_angle = prev_steer_angle;
-	} else {
-		prev_steer_err = err_steer;
-		err_steer = refSteer - max_i;
-		d_err_steer = (err_steer - prev_steer_err) / dt;
-	}
-		steer_angle = Kp_steer * err_steer + Kd_steer * d_err_steer;
+    //Steering PD control
 
-	//tele_steer_angle = steer_angle;
-	pw = angle2pw_us(steer_angle);
-	pw = pw * (.000001);
 
-	//ACTUATION!
+    if (!lineInView()) {
+        steer_angle = prev_steer_angle;
+    } 
+    else {
+        prev_steer_err = err_steer;
+        err_steer = refSteer - max_i;
+        d_err_steer = (err_steer - prev_steer_err) / dt;
+    }
+    steer_angle = Kp_steer * err_steer + Kd_steer * d_err_steer;
+    pw = angle2pw_us(steer_angle);
+    //tele_steer_angle = steer_angle;
+    if ((old_pw >= 0.8 * pw) || (old_pw <= 1.2 * pw)) {
+        old_pw = pw;
+        pw = pw * (0.000001); //seconds
+        
+        ////Send INPUT value to servo
+    
+        servo.pulsewidth(pw);
+        //TELEMETRY
+        tele_servo_pwm = pw*1000000;;  
+        
+    }
 
-	////Send INPUT value to servo
-	if (max > 0.0) {
-		servo.pulsewidth(pw);
-		//TELEMETRY
-		tele_servo_pwm = pw*1000000;
-	}
+    
 
-//	max = 0;
+
 }
 
 
@@ -258,37 +276,30 @@ float angle2pw_us(float angle) {
     if (servo_pulse_width > r_end) {
             servo_pulse_width = r_end;
     }
-	else if (servo_pulse_width < l_end) {
-		servo_pulse_width = l_end;
-	}
-	return servo_pulse_width;
+    else if (servo_pulse_width < l_end) {
+        servo_pulse_width = l_end;
+    }
+    return servo_pulse_width;
 }
 
-void autoExposureControl() {
-	//exp_error =
-	max_error = max - max_ref;
-	//tele_max_err = max_error;
-	if (max > max_ref) {
-		exp_time -= .00002;
-	} else if (max < max_ref) {
-		exp_time += .00002;
-	}
-
-	if (exp_time < min_exp_time) {
-		exp_time = min_exp_time;
-	} else if (exp_time > max_exp_time) {
-		exp_time = max_exp_time;
-	}
-	tele_exp_time = exp_time;
+void autoExposureCAontrol() {
+    //exp_error =
+//    max_error = max - max_ref;
+    //tele_max_err = max_error;
+    if (avg > 100) { //underexposed condition
+        if (exp_time > min_exp_time) { //make sure not to go below 0 ms
+            exp_time -= 0.0001; // 0.1ms
+        }
+    } 
+    if (avg < 50 ) { // overexposed condition
+        if (exp_time < max_exp_time) { //make sure not to go above 20ms
+            exp_time += 0.0001; // 0.1ms
+        }
+    }
+    tele_exp_time = exp_time;
 }
 
-bool lineInView() {
-	tele_linewidth = abs(max_i - old_max_i);
-	if (max_i == old_max_i && max_i >= 127) {
-		return false;
-	}
-	return (abs(max_i - old_max_i) < linewidth) && (abs(max - old_max) < .05*max);
-}
+
 
 //VELOCITY!
 //ISR for HALL sensor reading
@@ -298,126 +309,128 @@ void rpmCounter() {
 
 void velocity_OPENLOOP()
 {
-	motor.write(0.10f);
+    motor.write(0.11f);
 }
 
 //Function for Speed Reading and motor command
 void velocityPI() {
-	//Calculate velocity (revolutions/fixed time unit)
-	vel = (float) (revs) * velTransform;
+    //Calculate velocity (revolutions/fixed time unit)
+    vel = (float) (revs) * velTransform;
 
-	//Code begins when switch is turned on
-	if (vel > 0.0){
-		//Calculate moving average
-		if (count < resolution) {
-			velSum = velSum + vel;
-			velMA = vel;
-			//printf("%i\r\n",count);
-			count++;
-			//printf("%f\r\n",velMA);
-		} else if (count == resolution) {
-			velMA = (velSum + vel)/resolution;
-			//printf("%i\r\n",count);
-			count++;
-			//printf("%f\r\n",velMA);
-		} else {
-			velMA = velMA + (vel/resolution) - (velMA/resolution);
-			//printf("%f\r\n",velMA);
-		}
+    //Code begins when switch is turned on
+    if (vel > 0.0){
+        //Calculate moving average
+        if (count < resolution) {
+            velSum = velSum + vel;
+            velMA = vel;
+            //printf("%i\r\n",count);
+            count++;
+            //printf("%f\r\n",velMA);
+        } else if (count == resolution) {
+            velMA = (velSum + vel)/resolution;
+            //printf("%i\r\n",count);
+            count++;
+            //printf("%f\r\n",velMA);
+        } else {
+            velMA = velMA + (vel/resolution) - (velMA/resolution);
+            //printf("%f\r\n",velMA);
+        }
 
-		//Calculate ERROR
-		err = refVel - velMA;
+        //Calculate ERROR
+        err = refVel - velMA;
 
-		//Accumulate error for integral term
-		intgrlTerm = intgrlTerm + (Ki*err);
+        //Accumulate error for integral term
+        intgrlTerm = intgrlTerm + (Ki*err);
 
-		//Anti-Windup check!
-		if (intgrlTerm > maxPWM){
-			intgrlTerm = maxPWM;
-		} else if (intgrlTerm < minPWM){
-			intgrlTerm = minPWM;
-		}
+        //Anti-Windup check!
+        if (intgrlTerm > maxPWM){
+            intgrlTerm = maxPWM;
+        } else if (intgrlTerm < minPWM){
+            intgrlTerm = minPWM;
+        }
 
-		//Calculate INPUT value
-		//dutyInput = (Kp*err) + intgrlTerm;
-		dutyInput = (Kp*err);
+        //Calculate INPUT value
+        //dutyInput = (Kp*err) + intgrlTerm;
+        dutyInput = (Kp*err);
 
-		//Clamp REFERENCE value if needed
-		if (dutyInput > maxPWM) {
-			dutyInput = maxPWM;
-		} else if (dutyInput < minPWM) {
-			dutyInput = minPWM;
-		}
+        //Clamp REFERENCE value if needed
+        if (dutyInput > maxPWM) {
+            dutyInput = maxPWM;
+        } else if (dutyInput < minPWM) {
+            dutyInput = minPWM;
+        }
 
-		if (ramp<25){
-			dutyInput = 0.07f;
-			ramp++;
-		}
+        if (ramp<25){
+            dutyInput = 0.07f;
+            ramp++;
+        }
 
-		//ACTUATION!
-		//Send INPUT value to motor
-		motor.write(dutyInput);
-		revs = 0;
+        //ACTUATION!
+        //Send INPUT value to motor
+        motor.write(dutyInput);
+        revs = 0;
 
-		//TELEMETRY
-		//tele_motor_pwm = dutyInput*100;
-	}
+        //TELEMETRY
+        //tele_motor_pwm = dutyInput*100;
+    }
 }
 
 //ISR for timed controller using a Ticker
 void control() {
+    steeringPD();
+    autoExposureControl();
+    //Steering control
 
-	//Steering control
-	steeringPD();
-	autoExposureControl();
-	//Velocity control
-	//velocityPI();
-	velocity_OPENLOOP();
+    //Velocity control
+    //velocityPI();
+    velocity_OPENLOOP();
 
 }
 
 //Function to initialize system
 void setup() {
 
-	//TELEMETRY
-	telemetry_serial.baud(38400);
+    //TELEMETRY
+    telemetry_serial.baud(38400);
 
-	//tele_motor_pwm.set_limits(0.0, 20.0); // lower bound, upper bound
-	tele_servo_pwm.set_limits(0.0, 2000.0); // lower bound, upper bound
-	telemetry_obj.transmit_header();
+    //tele_motor_pwm.set_limits(0.0, 20.0); // lower bound, upper bound
+    tele_servo_pwm.set_limits(0.0, 2000.0); // lower bound, upper bound
+    telemetry_obj.transmit_header();
 
-	//tele_steer_angle.set_limits(-20.0,20.0);
+    //tele_steer_angle.set_limits(-20.0,20.0);
 
-	//set pwm periods
-	motor.period_us(50); // 20 kHz frequency
-	servo.period_ms(10); //Set servo PWM period = 3ms
+    //set pwm periods
+    motor.period_us(50); // 20 kHz frequency
+    servo.period_ms(10); //Set servo PWM period = 3ms
 
-	//set regular interrupts
-	hall.rise(&rpmCounter);
-	hall.fall(&rpmCounter);
+    //set regular interrupts
+    hall.rise(&rpmCounter);
+    hall.fall(&rpmCounter);
 
-	//set Ticker interrupts
-	timestep.attach(&control,dt);
-	//telemTick.attach(&print_serial,dt_telem);
+    //set Ticker interrupts
+    timestep.attach(&control,dt);
+    //telemTick.attach(&print_serial,dt_telem);
 
-	//set
-	//printer.attach(&printerFcn,0.05);
+    //set
+    //printer.attach(&printerFcn,0.05);
 
-	//set BrakeEN to HIGH to allow driving
-	brakeEN.write(1);
+    //set BrakeEN to HIGH to allow driving
+    brakeEN.write(1);
 
-	//set warm-up speed and command motor
-	dutyInput = 0.07f;
-	motor.write(dutyInput);
+    //set warm-up speed and command motor
+    dutyInput = 0.07f;
+    motor.write(dutyInput);
 }
 
 //Main CODE
 int main() {
-	//run setup function
-	setup();
+    //run setup function
+    setup();
 
-	//run while loop
-	while (1) {
-		print_serial();
+    //run while loop
+    while (1) {    
+
+        print_serial();
+        
     }
 }
