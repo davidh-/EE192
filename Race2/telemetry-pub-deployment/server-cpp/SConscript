@@ -1,0 +1,23 @@
+# SConscript file which can be included from a top-level SConsctuct file.
+# Provides a static library called 'telemetry'.
+#
+# Usage:
+# telemetry = SConscript('telemetry/server-cpp/SConscript', exports='env')
+# Read up on SCons hierarchical builds for more information.
+#
+# Inputs:
+# - env: properly configured C++ build environment for your platform (like
+#   env['CXX'] = 'arm-none-eabi-g++') with platform headers in the path.
+#
+# Returns:
+# - a static library to be included in your program
+#
+# The telemetry headers will be automatically added to the environment CPPPATH.
+
+Import('env')
+
+env.Append(CPPPATH = [Dir('.')])
+
+lib = env.StaticLibrary('telemetry', Glob('*.cpp'))
+
+Return('lib')
